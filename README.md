@@ -1,2 +1,2 @@
-# paseo
+# Paseo
 Easy to use SEO

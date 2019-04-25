@@ -1,0 +1,40 @@
+{
+  "name": "ether/paseo",
+  "description": "Easy to use SEO",
+  "version": "1.0.0",
+  "type": "craft-plugin",
+  "keywords": [
+    "seo",
+    "sitemap",
+    "redirect",
+    "analytics",
+    "schema"
+  ],
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "Ether",
+      "homepage": "https://ethercreative.co.uk"
+    }
+  ],
+  "support": {
+    "email": "dev@ethercreative.co.uk",
+    "issues": "https://github.com/ethercreative/paseo/issues?state=open",
+    "source": "https://github.com/ethercreative/paseo",
+    "docs": "https://github.com/ethercreative/paseo/blob/master/README.md"
+  },
+  "require": {
+    "craftcms/cms": "^3.1.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "ether\\paseo\\": "src/"
+    }
+  },
+  "extra": {
+    "handle": "paseo",
+    "name": "Paseo",
+    "documentationUrl": "https://github.com/ethercreative/paseo/blob/master/README.md",
+    "class": "ether\\paseo\\Paseo"
+  }
+}
