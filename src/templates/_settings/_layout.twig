@@ -1,0 +1,47 @@
+{% extends '_layouts/cp' %}
+{% set docTitle = title ~ ' ' ~ ('Settings'|t) %}
+{% set selectedSubnavItem = 'settings' %}
+{% set fullPageForm = true %}
+
+{% set ls = craft.app.request.segments|last %}
+{% set crumbs = [
+	{ url: cpUrl('paseo'), label: 'Paseo' },
+	{ url: cpUrl('paseo/settings'), label: 'Settings'|t },
+] %}
+
+{% block sidebar %}
+
+	{% set items = {
+		'': 'General'|t('paseo'),
+		'sitemap': 'Sitemap'|t('paseo'),
+	} %}
+
+	<nav>
+		<ul>
+			{% for slug, label in items %}
+				<li>
+					{% set active = ls == slug or (slug == '' and ls == 'settings') %}
+					<a
+						href="{{ cpUrl('paseo/settings' ~ (slug ? '/' ~ slug)) }}"
+						class="{{ active ? 'sel' }}"
+					>
+						{{ label }}
+					</a>
+				</li>
+			{% endfor %}
+		</ul>
+	</nav>
+
+{% endblock %}
+
+{% block content %}
+
+	<input type="hidden" name="action" value="plugins/save-plugin-settings">
+	<input type="hidden" name="pluginHandle" value="paseo">
+	{{ redirectInput('paseo/settings' ~ (ls == 'settings' ?: '/' ~ ls)) }}
+
+	{% namespace 'settings' %}
+		{{ block('settingsContent') }}
+	{% endnamespace %}
+
+{% endblock %}

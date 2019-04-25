@@ -9,8 +9,9 @@
 namespace ether\paseo\controllers;
 
 use craft\web\Controller;
+use ether\paseo\Paseo;
+use yii\base\Action;
 use yii\web\ForbiddenHttpException;
-use yii\web\Response;
 
 /**
  * Class SettingsController
@@ -22,14 +23,29 @@ class SettingsController extends Controller
 {
 
 	/**
-	 * @return Response
+	 * @param Action $action
+	 *
+	 * @return bool
 	 * @throws ForbiddenHttpException
 	 */
-	public function actionIndex ()
+	public function beforeAction ($action)
 	{
 		$this->requireAdmin();
 
+		return parent::beforeAction($action);
+	}
+
+	public function actionIndex ()
+	{
 		return $this->renderTemplate('paseo/_settings/index');
+	}
+
+	public function actionSitemap ()
+	{
+		return $this->renderTemplate(
+			'paseo/_settings/sitemap',
+			['settings' => Paseo::i()->getSettings()]
+		);
 	}
 
 }

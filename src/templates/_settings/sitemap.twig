@@ -1,0 +1,40 @@
+{% extends 'paseo/_settings/_layout.twig' %}
+{% from '_includes/forms' import lightswitchField, textField %}
+
+{% set title = 'Sitemap'|t('paseo') %}
+
+{% block settingsContent %}
+
+	{{ lightswitchField({
+		first: true,
+		name: 'sitemapEnabled',
+		label: 'Enabled'|t,
+		instructions: 'Will generate and serve sitemap files when enabled.'|t('paseo'),
+		on: settings.sitemapEnabled,
+	}) }}
+
+	{{ textField({
+		name: 'sitemapPaginationLimit',
+		label: 'Pagination Limit'|t('paseo'),
+		instructions: 'How many top-level elements each sitemap can show per-page. Reduce this number if your server is struggling to generate the sitemaps.'|t('paseo'),
+		type: 'number',
+		value: settings.sitemapPaginationLimit,
+		required: true,
+		errors: settings.getErrors('sitemapPaginationLimit'),
+	}) }}
+
+	{{ lightswitchField({
+		name: 'sitemapIncludeMedia',
+		label: 'Include Media'|t('paseo'),
+		instructions: 'Will include images and videos found in asset fields.'|t('paseo'),
+		on: settings.sitemapIncludeMedia,
+	}) }}
+
+	{{ lightswitchField({
+		name: 'sitemapIncludeIndexableFiles',
+		label: 'Include Indexable Files'|t('paseo'),
+		instructions: 'Will include files found in asset fields that can be [indexed by Google](https://support.google.com/webmasters/answer/35287?hl=en).'|t('paseo'),
+		on: settings.sitemapIncludeIndexableFiles,
+	}) }}
+
+{% endblock %}

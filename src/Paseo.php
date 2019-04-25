@@ -16,6 +16,7 @@ use craft\helpers\UrlHelper;
 use craft\services\UserPermissions;
 use craft\web\UrlManager;
 use ether\paseo\models\Settings;
+use ether\paseo\services\Sitemap;
 use yii\base\Event;
 
 /**
@@ -23,6 +24,8 @@ use yii\base\Event;
  *
  * @author  Ether Creative
  * @package ether\paseo
+ *
+ * @property Sitemap $sitemap
  */
 class Paseo extends Plugin
 {
@@ -33,6 +36,8 @@ class Paseo extends Plugin
 	const EDITION_LITE = 'lite';
 	const EDITION_PRO  = 'pro';
 
+	public static $hasCommerce = false;
+
 	public $hasCpSection  = true;
 	public $hasCpSettings = true;
 
@@ -42,6 +47,14 @@ class Paseo extends Plugin
 	public function init ()
 	{
 		parent::init();
+
+		$this->setComponents([
+			'sitemap' => Sitemap::class,
+		]);
+
+		/** @noinspection PhpUndefinedNamespaceInspection */
+		/** @noinspection PhpUndefinedClassInspection */
+		self::$hasCommerce = class_exists(\craft\commerce\Plugin::class);
 
 		// Events
 		// ---------------------------------------------------------------------
@@ -151,6 +164,7 @@ class Paseo extends Plugin
 
 		// Settings
 		$event->rules['paseo/settings'] = 'paseo/settings/index';
+		$event->rules['paseo/settings/sitemap'] = 'paseo/settings/sitemap';
 	}
 
 	public function onRegisterPermissions (RegisterUserPermissionsEvent $event)

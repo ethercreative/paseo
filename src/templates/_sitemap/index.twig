@@ -1,9 +1,164 @@
 {% extends '_layouts/cp' %}
+{% from '_includes/forms' import lightswitch, select %}
 {% set title = 'Sitemap'|t('paseo') %}
+{% set fullPageForm = true %}
 {% set selectedSubnavItem = 'sitemap' %}
+{% set crumbs = [
+	{ url: cpUrl('paseo'), label: 'Paseo' },
+] %}
+
+{% set changeFrequencyOpts = {
+	'always': 'Always'|t('paseo'),
+	'hourly': 'Hourly'|t('paseo'),
+	'daily': 'Daily'|t('paseo'),
+	'weekly': 'Weekly'|t('paseo'),
+	'monthly': 'Monthly'|t('paseo'),
+	'yearly': 'Yearly'|t('paseo'),
+	'never': 'Never'|t('paseo'),
+} %}
+
+{% set priorityOpts = {
+	'1.0': '1.0 (High)'|t('paseo'),
+	'0.9': '0.9',
+	'0.8': '0.8',
+	'0.7': '0.7',
+	'0.6': '0.6',
+	'0.5': '0.5 (Normal)'|t('paseo'),
+	'0.4': '0.4',
+	'0.3': '0.3',
+	'0.2': '0.2',
+	'0.1': '0.1',
+	'0.0': '0.0 (Low)'|t('paseo'),
+} %}
 
 {% block content %}
 
-	Hello world!
+	<input type="hidden" name="action" value="paseo/sitemap/save-rows">
+
+	<p>[TODO: Blurb about sitemap, warn if sitemap isn't enabled]</p>
+
+	{% for handle, group in groups if group.rows|length %}
+	<br>
+
+	<h2>{{ group.label }}</h2>
+
+	<ul class="paseo-groups">
+		{% for row in group.rows %}
+			<li class="paseo-group">
+				<header>
+					{{ row.name }}
+
+					<button
+						class="icon settings"
+						title="Edit {{ row.name }}"
+						type="button"
+						@click="toggle('{{ handle ~ row.groupId }}')"
+					></button>
+				</header>
+				<div :class="{'paseo-visible': activeRow === '{{ handle ~ row.groupId }}'}" class="hidden">
+					<table class="data fullwidth">
+						<thead>
+						<tr>
+							<th>{{ 'Site'|t }}</th>
+							<th class="paseo-thin">{{ 'Frequency'|t('paseo') }}</th>
+							<th class="paseo-thin">{{ 'Priority'|t('paseo') }}</th>
+							<th class="paseo-thin">{{ 'Enabled'|t }}</th>
+						</tr>
+						</thead>
+						<tbody>
+						{% for site in sites %}
+							<tr>
+								{% set key = handle ~ '.' ~ row.groupId ~ '.' ~ site.id %}
+								{% set name = 'row[' ~ key ~ ']' %}
+								{% set record = rows[key] %}
+								<td>
+									<input type="hidden" name="{{ name }}[id]" value="{{ record.id }}">
+									{{ site.name }}
+								</td>
+								<td>
+									{{ select({
+										name: name ~ '[frequency]',
+										options: changeFrequencyOpts,
+										value: record.frequency,
+									}) }}
+								</td>
+								<td>
+									{{ select({
+										name: name ~ '[priority]',
+										options: priorityOpts,
+										value: record.priority,
+									}) }}
+								</td>
+								<td>
+									{{ lightswitch({
+										name: name ~ '[enabled]',
+										on: record.enabled,
+									}) }}
+								</td>
+							</tr>
+						{% endfor %}
+						</tbody>
+					</table>
+				</div>
+			</li>
+		{% endfor %}
+	</ul>
+	{% endfor %}
+
+	<br>
+
+	<h2>Custom URLs</h2>
+	<p>[TODO: Custom URLs]</p>
 
 {% endblock %}
+
+{% css %}
+.paseo-groups {
+	list-style: none;
+}
+.paseo-group:not(:first-child) {
+	padding-top: 7px;
+}
+.paseo-group > header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding-bottom: 7px;
+	border-bottom: 1px solid #f4f4f4;
+}
+.paseo-group > div {
+	padding: 13px 14px 14px;
+	background-color: #f4f4f4;
+}
+.paseo-group button {
+	appearance: none;
+	background: none;
+	border: none;
+	border-radius: 0;
+	cursor: pointer;
+	font-size: 14px;
+}
+.paseo-thin {
+	width: 10% !important;
+}
+.paseo-visible {
+	display: block !important;
+}
+{% endcss %}
+
+{% js %}
+new Vue({
+	el: '#content',
+	data: {
+		activeRow: null,
+	},
+	methods: {
+		toggle: function (row) {
+			if (this.activeRow === row)
+				this.activeRow = null;
+			else
+				this.activeRow = row;
+		},
+	},
+});
+{% endjs %}
