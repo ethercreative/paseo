@@ -1,5 +1,5 @@
 {% extends '_layouts/cp' %}
-{% from '_includes/forms' import lightswitch, select %}
+{% from '_includes/forms' import lightswitch, select, text %}
 {% set title = 'Sitemap'|t('paseo') %}
 {% set fullPageForm = true %}
 {% set selectedSubnavItem = 'sitemap' %}
@@ -46,14 +46,12 @@
 		{% for row in group.rows %}
 			<li class="paseo-group">
 				<header>
-					{{ row.name }}
-
 					<button
 						class="icon settings"
 						title="Edit {{ row.name }}"
 						type="button"
 						@click="toggle('{{ handle ~ row.groupId }}')"
-					></button>
+					>{{ row.name }}</button>
 				</header>
 				<div :class="{'paseo-visible': activeRow === '{{ handle ~ row.groupId }}'}" class="hidden">
 					<table class="data fullwidth">
@@ -108,7 +106,78 @@
 	<br>
 
 	<h2>Custom URLs</h2>
-	<p>[TODO: Custom URLs]</p>
+
+	<ul class="paseo-groups">
+		<li class="paseo-group" v-for="row in customRows">
+			<header>
+				<button
+					class="icon settings"
+					title="Edit [Custom Name]"
+					type="button"
+					@click="toggle('custom.' + row.uid)"
+				>{row}</button>
+
+				<button
+					class="icon delete"
+					title="Delete [Custom Name]"
+					type="button"
+					@click="deleteNewCustom(row)"
+				></button>
+			</header>
+			<div :class="{'paseo-visible': activeRow === ('custom.' + row.uid)}" class="hidden">
+				<table class="data fullwidth">
+					<thead>
+					<tr>
+						<th>{{ 'Site'|t }}</th>
+						<th>URI</th>
+						<th class="paseo-thin">{{ 'Frequency'|t('paseo') }}</th>
+						<th class="paseo-thin">{{ 'Priority'|t('paseo') }}</th>
+						<th class="paseo-thin">{{ 'Enabled'|t }}</th>
+					</tr>
+					</thead>
+					<tbody>
+					{% for site in sites %}
+						<tr>
+							{% set name = 'row[custom.{row.uid}.' ~ site.id ~ ']' %}
+							<td>{{ site.name }}</td>
+							<td>
+								<label class="paseo-url">
+									{{ parseEnv(site.baseUrl) }}/
+									{{ text({
+										name: name ~ '[url]',
+										required: true,
+									}) }}
+								</label>
+							</td>
+							<td>
+								{{ select({
+									name: name ~ '[frequency]',
+									options: changeFrequencyOpts,
+									value: 'monthly',
+								}) }}
+							</td>
+							<td>
+								{{ select({
+									name: name ~ '[priority]',
+									options: priorityOpts,
+									value: 0.5,
+								}) }}
+							</td>
+							<td>
+								{{ lightswitch({
+									name: name ~ '[enabled]',
+									on: true,
+								}) }}
+							</td>
+						</tr>
+					{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</li>
+	</ul>
+
+	<button type="button" @click="addCustom()">Add Custom</button>
 
 {% endblock %}
 
@@ -138,19 +207,41 @@
 	cursor: pointer;
 	font-size: 14px;
 }
+.paseo-group button:first-child {
+	width: 100%;
+	text-align: left;
+}
+.paseo-group button:first-child:before {
+	margin-top: -1px;
+	margin-right: 10px;
+	color: rgba(0, 0, 0, 0.2);
+}
+.paseo-group button:first-child:hover:before {
+	color: rgba(0, 0, 0, 0.75);
+}
 .paseo-thin {
-	width: 10% !important;
+	width: 7% !important;
 }
 .paseo-visible {
 	display: block !important;
+}
+.paseo-url {
+	display: flex;
+	align-items: center;
+	color: rgba(0, 0, 0, 0.5);
+}
+.paseo-url input {
+	margin-left: 5px;
 }
 {% endcss %}
 
 {% js %}
 new Vue({
 	el: '#content',
+	delimiters: ['{', '}'],
 	data: {
 		activeRow: null,
+		customRows: [],
 	},
 	methods: {
 		toggle: function (row) {
@@ -158,6 +249,18 @@ new Vue({
 				this.activeRow = null;
 			else
 				this.activeRow = row;
+		},
+		deleteNewCustom: function (row) {
+			this.customRows = [].slice.call(this.customRows).filter(function (r) {
+				return r !== row;
+			});
+		},
+		addCustom: function () {
+			this.customRows.push(
+				([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+					(c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+				)
+			);
 		},
 	},
 });

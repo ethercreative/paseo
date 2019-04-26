@@ -9,6 +9,7 @@
 namespace ether\paseo\migrations;
 
 use craft\db\Migration;
+use craft\db\Table;
 use ether\paseo\records\SitemapRecord;
 
 /**
@@ -54,8 +55,23 @@ class Install extends Migration
 			]
 		);
 
-		// TODO: Populate using currently available elements
-		// TODO: siteId / elementId CASCADE
+		$this->addForeignKey(
+			null,
+			SitemapRecord::tableName(),
+			'siteId',
+			Table::SITES,
+			'id',
+			'CASCADE'
+		);
+
+		$this->addForeignKey(
+			null,
+			SitemapRecord::tableName(),
+			'elementId',
+			Table::ELEMENTS,
+			'id',
+			'CASCADE'
+		);
 
 	}
 

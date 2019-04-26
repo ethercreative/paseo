@@ -13,6 +13,7 @@ use craft\web\assets\vue\VueAsset;
 use craft\web\Controller;
 use ether\paseo\Paseo;
 use yii\base\InvalidConfigException;
+use yii\db\Exception;
 use yii\web\BadRequestHttpException;
 use yii\web\ForbiddenHttpException;
 use yii\web\Response;
@@ -50,6 +51,7 @@ class SitemapController extends Controller
 	/**
 	 * @throws ForbiddenHttpException
 	 * @throws BadRequestHttpException
+	 * @throws Exception
 	 */
 	public function actionSaveRows ()
 	{
