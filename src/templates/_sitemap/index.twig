@@ -35,13 +35,33 @@
 
 	<input type="hidden" name="action" value="paseo/sitemap/save-rows">
 
-	<p>[TODO: Blurb about sitemap, warn if sitemap isn't enabled]</p>
+	<div class="paseo-tip">
+		<h4>{{ 'About your sitemap'|t('paseo') }}</h4>
+		{{ 'Your sitemap will tell Google and other search engines about the most *important* pages on your site, and their relationship to media and other files (if you\'ve enabled that in the [sitemap settings]({settingsUrl})).'|t('paseo', {
+			'settingsUrl': cpUrl('paseo/settings/sitemap'),
+		})|md }}
+		<p>{{ 'We recommend only enabling the pages that you think are most important such as landing pages, categories, products, etc., and disable utility pages like your privacy policy or contact page.'|t('paseo') }}</p>
+	</div>
+
+	<div class="paseo-tip">
+		<h4>{{ 'Setting priority'|t('paseo') }}</h4>
+		<p>{{ 'Priority should be set based on how important a page is. So landing pages and category pages should have a higher priority than product pages, for example.'|t('paseo') }}</p>
+	</div>
+
+	{% if not enabled %}
+		<div class="paseo-warning">
+			<h4>{{ 'Your sitemap isn\'t enabled!'|t('paseo') }}</h4>
+			{{ 'These settings won\'t have any affect until you enable it. Visit the [sitemap settings]({settingsUrl}) to enable the sitemap.'|t('paseo', {
+				'settingsUrl': cpUrl('paseo/settings/sitemap'),
+			})|md }}
+		</div>
+	{% endif %}
 
 	{% for handle, group in groups if handle == 'custom' or group.rows|length %}
 	{% set isCustom = handle == 'custom' %}
-	<br>
+	{% if not loop.first %}<br>{% endif %}
 
-	<h2>{{ group.label }}</h2>
+	<h6>{{ group.label }}</h6>
 
 	<ul class="paseo-groups"{% if isCustom %} id="paseoCustomUrls"{% endif %}>
 		{% for row in group.rows %}
@@ -129,7 +149,7 @@
 	{% endfor %}
 
 	<button type="button" id="paseoAddCustom" class="btn icon add">
-		{{- 'Add Custom'|t -}}
+		{{- 'Add Custom URL'|t -}}
 	</button>
 
 	<script type="text/html" id="paseoCustomUrlTemplate">
@@ -210,7 +230,7 @@
 }
 .paseo-group > header {
 	display: flex;
-	align-items: center;
+	align-items: stretch;
 	justify-content: space-between;
 	border-bottom: 1px solid #f4f4f4;
 }
@@ -229,7 +249,7 @@
 .paseo-group button:first-child {
 	width: 100%;
 	text-align: left;
-	padding: 7px 8px;
+	padding: 10px 8px;
 }
 .paseo-group button:first-child:before {
 	margin-top: -1px;

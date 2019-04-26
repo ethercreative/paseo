@@ -218,11 +218,16 @@ class Sitemap extends Component
 		$transaction->commit();
 	}
 
-	public function deleteSitemapRowsByGroupId (array $groupIds)
+	/**
+	 * Deletes sitemap rows by the given IDs
+	 *
+	 * @param array $ids
+	 */
+	public function deleteSitemapRowsByIds (array $ids)
 	{
 		SitemapRecord::deleteAll([
 			'AND',
-			['in', 'id', $groupIds],
+			['in', 'id', $ids],
 		]);
 	}
 

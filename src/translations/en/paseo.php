@@ -43,7 +43,21 @@ return [
 
 	'Custom URLs' => 'Custom URLs',
 	'Custom URL' => 'Custom URL',
-	'Add Custom' => 'Add Custom',
+	'Add Custom URL' => 'Add Custom URL',
+
+	'About your sitemap' => 'About your sitemap',
+	'Your sitemap will tell Google and other search engines about the most *important* pages on your site, and their relationship to media and other files (if you\'ve enabled that in the [sitemap settings]({settingsUrl})).' =>
+		'Your sitemap will tell Google and other search engines about the most *important* pages on your site, and their relationship to media and other files (if you\'ve enabled that in the [sitemap settings]({settingsUrl})).',
+	'We recommend only enabling the pages that you think are most important such as landing pages, categories, products, etc., and disable utility pages like your privacy policy or contact page.' =>
+		'We recommend only enabling the pages that you think are most important such as landing pages, categories, products, etc., and disable utility pages like your privacy policy or contact page.',
+
+	'Setting priority' => 'Setting priority',
+	'Priority should be set based on how important a page is. So landing pages and category pages should have a higher priority than product pages, for example.' =>
+		'Priority should be set based on how important a page is. So landing pages and category pages should have a higher priority than product pages, for example.',
+
+	'Your sitemap isn\'t enabled!' => 'Your sitemap isn\'t enabled!',
+	'These settings won\'t have any affect until you enable it. Visit the [sitemap settings]({settingsUrl}) to enable the sitemap.' =>
+		'These settings won\'t have any affect until you enable it. Visit the [sitemap settings]({settingsUrl}) to enable the sitemap.',
 
 	// Settings
 	// =========================================================================

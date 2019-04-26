@@ -145,6 +145,14 @@ class Paseo extends Plugin
 		);
 	}
 
+	/**
+	 * @return bool|Settings|null
+	 */
+	public function getSettings ()
+	{
+		return parent::getSettings();
+	}
+
 	// Events
 	// =========================================================================
 

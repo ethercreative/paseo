@@ -12,6 +12,8 @@ use Craft;
 use craft\errors\SiteNotFoundException;
 use craft\web\Controller;
 use ether\paseo\Paseo;
+use ether\paseo\web\assets\PaseoAsset;
+use yii\base\InvalidConfigException;
 use yii\db\Exception;
 use yii\web\BadRequestHttpException;
 use yii\web\ForbiddenHttpException;
@@ -30,18 +32,22 @@ class SitemapController extends Controller
 	 * @return Response
 	 * @throws ForbiddenHttpException
 	 * @throws SiteNotFoundException
+	 * @throws InvalidConfigException
 	 */
 	public function actionIndex ()
 	{
 		$this->requirePermission('paseo.accessSitemap');
 
-		$groups = Paseo::i()->sitemap->getSitemapGroups();
-		$rows   = Paseo::i()->sitemap->getSitemapRows();
-		$sites  = Craft::$app->getSites()->getAllSites();
+		$enabled = Paseo::i()->getSettings()->sitemapEnabled;
+		$groups  = Paseo::i()->sitemap->getSitemapGroups();
+		$rows    = Paseo::i()->sitemap->getSitemapRows();
+		$sites   = Craft::$app->getSites()->getAllSites();
+
+		Craft::$app->getView()->registerAssetBundle(PaseoAsset::class);
 
 		return $this->renderTemplate(
 			'paseo/_sitemap/index',
-			compact('groups', 'sites', 'rows')
+			compact('groups', 'sites', 'rows', 'enabled')
 		);
 	}
 
@@ -55,11 +61,11 @@ class SitemapController extends Controller
 		$this->requirePermission('paseo.accessSitemap');
 		$request = Craft::$app->getRequest();
 
-		$rows = $request->getRequiredBodyParam('row');
-		$deleteGroupIds = $request->getBodyParam('paseoDeleteCustom', []);
+		$rows   = $request->getRequiredBodyParam('row');
+		$rowIds = $request->getBodyParam('paseoDeleteCustom', []);
 
 		Paseo::i()->sitemap->saveSitemapRows($rows);
-		Paseo::i()->sitemap->deleteSitemapRowsByGroupId($deleteGroupIds);
+		Paseo::i()->sitemap->deleteSitemapRowsByIds($rowIds);
 
 		$this->redirectToPostedUrl();
 	}
