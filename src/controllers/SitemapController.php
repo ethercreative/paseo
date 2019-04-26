@@ -9,10 +9,9 @@
 namespace ether\paseo\controllers;
 
 use Craft;
-use craft\web\assets\vue\VueAsset;
+use craft\errors\SiteNotFoundException;
 use craft\web\Controller;
 use ether\paseo\Paseo;
-use yii\base\InvalidConfigException;
 use yii\db\Exception;
 use yii\web\BadRequestHttpException;
 use yii\web\ForbiddenHttpException;
@@ -30,7 +29,7 @@ class SitemapController extends Controller
 	/**
 	 * @return Response
 	 * @throws ForbiddenHttpException
-	 * @throws InvalidConfigException
+	 * @throws SiteNotFoundException
 	 */
 	public function actionIndex ()
 	{
@@ -39,8 +38,6 @@ class SitemapController extends Controller
 		$groups = Paseo::i()->sitemap->getSitemapGroups();
 		$rows   = Paseo::i()->sitemap->getSitemapRows();
 		$sites  = Craft::$app->getSites()->getAllSites();
-
-		Craft::$app->getView()->registerAssetBundle(VueAsset::class);
 
 		return $this->renderTemplate(
 			'paseo/_sitemap/index',
@@ -56,9 +53,13 @@ class SitemapController extends Controller
 	public function actionSaveRows ()
 	{
 		$this->requirePermission('paseo.accessSitemap');
+		$request = Craft::$app->getRequest();
 
-		$rows = Craft::$app->getRequest()->getRequiredBodyParam('row');
+		$rows = $request->getRequiredBodyParam('row');
+		$deleteGroupIds = $request->getBodyParam('paseoDeleteCustom', []);
+
 		Paseo::i()->sitemap->saveSitemapRows($rows);
+		Paseo::i()->sitemap->deleteSitemapRowsByGroupId($deleteGroupIds);
 
 		$this->redirectToPostedUrl();
 	}

@@ -36,7 +36,7 @@ class Install extends Migration
 				'elementId'   => $this->integer()->null(), // for per-element overrides
 				'groupId'     => $this->string()->null(),
 				'group'       => $this->string()->null(),
-				'url'         => $this->string(255)->null(),
+				'uri'         => $this->string(255)->null(),
 				'frequency'   => $this->enum('frequency', [
 					'always',
 					'hourly',

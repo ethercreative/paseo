@@ -21,7 +21,7 @@ use craft\db\ActiveRecord;
  * @property int|null $elementId
  * @property string|null $groupId
  * @property string|null $group
- * @property string|null $url
+ * @property string|null $uri
  * @property string $frequency
  * @property float $priority
  * @property bool $enabled
@@ -42,8 +42,8 @@ class SitemapRecord extends ActiveRecord
 		$record = new self();
 
 		$record->frequency = 'monthly';
-		$record->priority = 0.5;
-		$record->enabled = '1';
+		$record->priority  = 0.5;
+		$record->enabled   = '1';
 
 		return $record;
 	}

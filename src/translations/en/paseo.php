@@ -41,6 +41,10 @@ return [
 	'0.5 (Normal)' => '0.5 (Normal)',
 	'0.0 (Low)'    => '0.0 (Low)',
 
+	'Custom URLs' => 'Custom URLs',
+	'Custom URL' => 'Custom URL',
+	'Add Custom' => 'Add Custom',
+
 	// Settings
 	// =========================================================================
 

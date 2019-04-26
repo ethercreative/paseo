@@ -14,6 +14,7 @@ use craft\commerce\models\ProductType;
 use craft\commerce\Plugin as Commerce;
 use craft\elements\Category;
 use craft\elements\Entry;
+use craft\errors\SiteNotFoundException;
 use craft\models\CategoryGroup;
 use craft\models\Section;
 use ether\paseo\events\RegisterSitemapGroupEvent;
@@ -72,6 +73,7 @@ class Sitemap extends Component
 	 * Returns an array of all the available sitemap groups
 	 *
 	 * @return array
+	 * @throws SiteNotFoundException
 	 */
 	public function getSitemapGroups ()
 	{
@@ -138,6 +140,19 @@ class Sitemap extends Component
 		]);
 		$this->trigger(self::EVENT_REGISTER_SITEMAP_GROUPS, $event);
 
+		$groups['custom'] = [
+			'label' => Paseo::t('Custom URLs'),
+			'rows' => array_map(function (SitemapRecord $row) {
+				return [
+					'groupId' => $row->groupId,
+					'name'    => $row->uri,
+				];
+			}, SitemapRecord::find()->where([
+				'group' => 'custom',
+				'siteId' => Craft::$app->getSites()->getPrimarySite()->id,
+			])->orderBy('dateCreated')->all()),
+		];
+
 		return $groups;
 	}
 
@@ -145,6 +160,7 @@ class Sitemap extends Component
 	 * Gets all the rows for the sitemap and formats them for use
 	 *
 	 * @return array
+	 * @throws SiteNotFoundException
 	 */
 	public function getSitemapRows ()
 	{
@@ -156,7 +172,7 @@ class Sitemap extends Component
 		foreach ($groups as $handle => $group)
 			foreach ($group['rows'] as $row)
 				foreach ($sites as $id)
-					$rows[$handle . '.' . $row['groupId'] . '.' . $id] = new SitemapRecord();
+					$rows[$handle . '.' . $row['groupId'] . '.' . $id] = SitemapRecord::withDefaults();
 
 		/** @var SitemapRecord $row */
 		foreach (SitemapRecord::find()->all() as $row)
@@ -180,9 +196,12 @@ class Sitemap extends Component
 		{
 			list($group, $groupId, $siteId) = explode('.', $key);
 
+			if ($group === 'custom' && empty($row['uri']))
+				continue;
+
 			$record = new SitemapRecord();
 
-			if ($row['id'])
+			if ($row['id'] ?? false)
 				$record = SitemapRecord::findOne($row['id']);
 
 			$record->group     = $group;
@@ -191,14 +210,20 @@ class Sitemap extends Component
 			$record->frequency = $row['frequency'];
 			$record->priority  = $row['priority'];
 			$record->enabled   = $row['enabled'] === '1';
-
-			// TODO: Handle custom URLs
-			// TODO: Record validation / error handling
+			$record->uri       = $row['uri'] ?? null;
 
 			$record->save();
 		}
 
 		$transaction->commit();
+	}
+
+	public function deleteSitemapRowsByGroupId (array $groupIds)
+	{
+		SitemapRecord::deleteAll([
+			'AND',
+			['in', 'id', $groupIds],
+		]);
 	}
 
 }

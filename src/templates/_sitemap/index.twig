@@ -37,27 +37,40 @@
 
 	<p>[TODO: Blurb about sitemap, warn if sitemap isn't enabled]</p>
 
-	{% for handle, group in groups if group.rows|length %}
+	{% for handle, group in groups if handle == 'custom' or group.rows|length %}
+	{% set isCustom = handle == 'custom' %}
 	<br>
 
 	<h2>{{ group.label }}</h2>
 
-	<ul class="paseo-groups">
+	<ul class="paseo-groups"{% if isCustom %} id="paseoCustomUrls"{% endif %}>
 		{% for row in group.rows %}
 			<li class="paseo-group">
 				<header>
 					<button
 						class="icon settings"
-						title="Edit {{ row.name }}"
+						title="{{ 'Edit'|t }} {{ row.name }}"
 						type="button"
-						@click="toggle('{{ handle ~ row.groupId }}')"
+						data-paseo-toggle-row="{{ handle ~ row.groupId }}"
 					>{{ row.name }}</button>
+
+					{% if isCustom %}
+						<button
+							class="icon delete"
+							title="{{ 'Delete'|t }} {{ row.name }}"
+							type="button"
+							data-paseo-delete="{{ handle ~ row.groupId }}"
+						></button>
+					{% endif %}
 				</header>
-				<div :class="{'paseo-visible': activeRow === '{{ handle ~ row.groupId }}'}" class="hidden">
+				<div data-paseo-row="{{ handle ~ row.groupId }}" class="hidden">
 					<table class="data fullwidth">
 						<thead>
 						<tr>
 							<th>{{ 'Site'|t }}</th>
+							{% if isCustom %}
+								<th>URI</th>
+							{% endif %}
 							<th class="paseo-thin">{{ 'Frequency'|t('paseo') }}</th>
 							<th class="paseo-thin">{{ 'Priority'|t('paseo') }}</th>
 							<th class="paseo-thin">{{ 'Enabled'|t }}</th>
@@ -73,6 +86,18 @@
 									<input type="hidden" name="{{ name }}[id]" value="{{ record.id }}">
 									{{ site.name }}
 								</td>
+								{% if isCustom %}
+									<td>
+										<label class="paseo-url">
+											{{ parseEnv(site.baseUrl) }}/
+											{{ text({
+												name: name ~ '[uri]',
+												required: true,
+												value: record.uri
+											}) }}
+										</label>
+									</td>
+								{% endif %}
 								<td>
 									{{ select({
 										name: name ~ '[frequency]',
@@ -103,28 +128,28 @@
 	</ul>
 	{% endfor %}
 
-	<br>
+	<button type="button" id="paseoAddCustom" class="btn icon add">
+		{{- 'Add Custom'|t -}}
+	</button>
 
-	<h2>Custom URLs</h2>
-
-	<ul class="paseo-groups">
-		<li class="paseo-group" v-for="row in customRows">
+	<script type="text/html" id="paseoCustomUrlTemplate">
+		<li class="paseo-group">
 			<header>
 				<button
 					class="icon settings"
-					title="Edit [Custom Name]"
+					title="{{ 'Edit'|t }} [[name]]"
 					type="button"
-					@click="toggle('custom.' + row.uid)"
-				>{row}</button>
+					data-paseo-toggle-row="[[uid]]"
+				>[[name]]</button>
 
 				<button
 					class="icon delete"
-					title="Delete [Custom Name]"
+					title="{{ 'Delete'|t }} [[name]]"
 					type="button"
-					@click="deleteNewCustom(row)"
+					data-paseo-delete="[[uid]]"
 				></button>
 			</header>
-			<div :class="{'paseo-visible': activeRow === ('custom.' + row.uid)}" class="hidden">
+			<div class="hidden">
 				<table class="data fullwidth">
 					<thead>
 					<tr>
@@ -138,13 +163,13 @@
 					<tbody>
 					{% for site in sites %}
 						<tr>
-							{% set name = 'row[custom.{row.uid}.' ~ site.id ~ ']' %}
+							{% set name = 'row[custom.[[uid]].' ~ site.id ~ ']' %}
 							<td>{{ site.name }}</td>
 							<td>
 								<label class="paseo-url">
 									{{ parseEnv(site.baseUrl) }}/
 									{{ text({
-										name: name ~ '[url]',
+										name: name ~ '[uri]',
 										required: true,
 									}) }}
 								</label>
@@ -175,9 +200,7 @@
 				</table>
 			</div>
 		</li>
-	</ul>
-
-	<button type="button" @click="addCustom()">Add Custom</button>
+	</script>
 
 {% endblock %}
 
@@ -185,14 +208,10 @@
 .paseo-groups {
 	list-style: none;
 }
-.paseo-group:not(:first-child) {
-	padding-top: 7px;
-}
 .paseo-group > header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding-bottom: 7px;
 	border-bottom: 1px solid #f4f4f4;
 }
 .paseo-group > div {
@@ -210,6 +229,7 @@
 .paseo-group button:first-child {
 	width: 100%;
 	text-align: left;
+	padding: 7px 8px;
 }
 .paseo-group button:first-child:before {
 	margin-top: -1px;
@@ -233,35 +253,161 @@
 .paseo-url input {
 	margin-left: 5px;
 }
+#paseoAddCustom {
+	margin-top: 14px;
+	font-size: 14px;
+}
 {% endcss %}
 
+{% js 'window.paseoCustomLabel = \'' ~ ('Custom URL'|t) ~ '\';' %}
 {% js %}
-new Vue({
-	el: '#content',
-	delimiters: ['{', '}'],
-	data: {
-		activeRow: null,
-		customRows: [],
-	},
-	methods: {
-		toggle: function (row) {
-			if (this.activeRow === row)
-				this.activeRow = null;
-			else
-				this.activeRow = row;
-		},
-		deleteNewCustom: function (row) {
-			this.customRows = [].slice.call(this.customRows).filter(function (r) {
-				return r !== row;
-			});
-		},
-		addCustom: function () {
-			this.customRows.push(
-				([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
-					(c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-				)
-			);
-		},
-	},
-});
+!function () {
+
+	// Properties
+	// =========================================================================
+
+	const rowToggles = document.querySelectorAll('button[data-paseo-toggle-row]')
+		, rowExpands = document.querySelectorAll('div[data-paseo-row]')
+		, customUrls = document.getElementById('paseoCustomUrls')
+		, customTmpl = document.getElementById('paseoCustomUrlTemplate');
+
+	let rows = {},
+	    activeRow = null;
+
+	// Actions
+	// =========================================================================
+
+	const onRowToggleClick = function (toggle) {
+		const id = toggle.dataset.paseoToggleRow;
+
+		if (activeRow)
+			rows[activeRow].classList.add('hidden');
+
+		if (activeRow === id) {
+			activeRow = null;
+			return;
+		}
+
+		activeRow = id;
+		rows[activeRow].classList.remove('hidden');
+	};
+
+	const onRowDeleteClick = function (btn) {
+		const uid = btn.dataset.paseoDelete;
+
+		if (activeRow === uid)
+			activeRow = null;
+
+		const idInputs = rows[uid].querySelectorAll('input[name*="[id]"]');
+		for (let i = 0, l = idInputs.length; i < l; ++i) {
+			const input = idInputs[i];
+			input.setAttribute('name', 'paseoDeleteCustom[]');
+			customUrls.parentNode.appendChild(input);
+		}
+
+		customUrls.removeChild(rows[uid].parentNode);
+
+		delete rows[uid];
+	};
+
+	const onFirstFieldInput = function (row, e) {
+		const uri = e.target.value = e.target.value.trim();
+
+		row.paseoToggle.textContent = uri || window.paseoCustomLabel;
+		row.paseoToggle.setAttribute(
+			'title',
+			row.paseoToggle.getAttribute('title').split(' ')[0] + ' ' + uri
+		);
+
+		row.paseoDelete.setAttribute(
+			'title',
+			row.paseoDelete.getAttribute('title').split(' ')[0] + ' ' + uri
+		);
+
+		for (let i = 0, l = row.paseoInputs.length; i < l; ++i) {
+			const input = row.paseoInputs[i];
+			const value = input.value.trim();
+
+			if (value === row.paseoPreviousUri || value === '')
+				input.value = uri;
+		}
+
+		row.paseoPreviousUri = uri;
+	};
+
+	const addCustomRow = function () {
+		const uid = ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+			(c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+		);
+
+		const markup = customTmpl.innerHTML
+			.replace(/\[\[uid]]/g, uid)
+			.replace(/\[\[name]]/g, window.paseoCustomLabel);
+
+		const temp = document.createElement('div');
+		temp.innerHTML = markup;
+
+		const row = temp.firstElementChild;
+
+		const toggle = row.querySelector('button[data-paseo-toggle-row]');
+		toggle.addEventListener('click', onRowToggleClick.bind(this, toggle));
+
+		const del = row.querySelector('button[data-paseo-delete]');
+		del.addEventListener('click', onRowDeleteClick.bind(this, del));
+
+		const input = row.querySelector('tr:first-child input');
+		input.addEventListener('input', onFirstFieldInput.bind(this, row));
+
+		row.paseoToggle = toggle;
+		row.paseoDelete = del;
+		row.paseoInputs = row.querySelectorAll('tr:not(:first-child) input');
+		row.paseoPreviousUri = '';
+
+		rows[uid] = row.lastElementChild;
+
+		customUrls.appendChild(row);
+
+		Craft.initUiElements(row);
+		onRowToggleClick(toggle);
+		input.focus();
+	};
+
+	// Init
+	// =========================================================================
+
+	for (let i = 0, l = rowExpands.length; i < l; ++i) {
+		const row = rowExpands[i];
+		rows[row.dataset.paseoRow] = row;
+	}
+
+	for (let i = 0, l = rowToggles.length; i < l; ++i) {
+		const toggle = rowToggles[i];
+		toggle.addEventListener('click', onRowToggleClick.bind(this, toggle));
+	}
+
+	const customDeleteBtns = customUrls.querySelectorAll('button[data-paseo-delete]');
+	for (let i = 0, l = customDeleteBtns.length; i < l; ++i) {
+		const btn = customDeleteBtns[i];
+		btn.addEventListener('click', onRowDeleteClick.bind(this, btn));
+	}
+
+	const firstUrlInputs = customUrls.querySelectorAll('tr:first-child label input');
+	for (let i = 0, l = firstUrlInputs.length; i < l; ++i) {
+		const input = firstUrlInputs[i];
+		let row = input.parentNode;
+
+		while (row.nodeName.toLowerCase() !== 'li')
+			row = row.parentNode;
+
+		row.paseoToggle = row.querySelector('button[data-paseo-toggle-row]');
+		row.paseoDelete = row.querySelector('button[data-paseo-delete]');
+		row.paseoInputs = row.querySelectorAll('tr:not(:first-child) input');
+		row.paseoPreviousUri = input.value;
+
+		input.addEventListener('input', onFirstFieldInput.bind(this, row))
+	}
+
+	document.getElementById('paseoAddCustom').addEventListener('click', addCustomRow);
+
+}();
 {% endjs %}
