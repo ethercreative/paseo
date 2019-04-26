@@ -33,6 +33,8 @@
 
 {% block content %}
 
+	<p style="color:red"><code>[TODO: Show urls / url structure for each row (show warning pill if no url)]</code></p>
+
 	<input type="hidden" name="action" value="paseo/sitemap/save-rows">
 
 	<div class="paseo-tip">
@@ -45,7 +47,7 @@
 
 	<div class="paseo-tip">
 		<h4>{{ 'Setting priority'|t('paseo') }}</h4>
-		<p>{{ 'Priority should be set based on how important a page is. So landing pages and category pages should have a higher priority than product pages, for example.'|t('paseo') }}</p>
+		<p>{{ 'Priority should be set based on how important a page is. So landing pages and category pages should have a higher priority than product pages, for example. Google currently ignores the priority, but it\'s worth getting it correct anyway.'|t('paseo') }}</p>
 	</div>
 
 	{% if not enabled %}

@@ -52,8 +52,8 @@ return [
 		'We recommend only enabling the pages that you think are most important such as landing pages, categories, products, etc., and disable utility pages like your privacy policy or contact page.',
 
 	'Setting priority' => 'Setting priority',
-	'Priority should be set based on how important a page is. So landing pages and category pages should have a higher priority than product pages, for example.' =>
-		'Priority should be set based on how important a page is. So landing pages and category pages should have a higher priority than product pages, for example.',
+	'Priority should be set based on how important a page is. So landing pages and category pages should have a higher priority than product pages, for example. Google currently ignores the priority, but it\'s worth getting it correct anyway.' =>
+		'Priority should be set based on how important a page is. So landing pages and category pages should have a higher priority than product pages, for example. Google currently ignores the priority, but it\'s worth getting it correct anyway.',
 
 	'Your sitemap isn\'t enabled!' => 'Your sitemap isn\'t enabled!',
 	'These settings won\'t have any affect until you enable it. Visit the [sitemap settings]({settingsUrl}) to enable the sitemap.' =>
@@ -79,5 +79,10 @@ return [
 	'Include Indexable Files' => 'Include Indexable Files',
 	'Will include files found in asset fields that can be [indexed by Google](https://support.google.com/webmasters/answer/35287?hl=en).' =>
 		'Will include files found in asset fields that can be [indexed by Google](https://support.google.com/webmasters/answer/35287?hl=en).',
+
+	// Jobs
+	// =========================================================================
+
+	'Generating sitemaps' => 'Generating sitemaps',
 
 ];

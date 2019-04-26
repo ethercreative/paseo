@@ -22,6 +22,7 @@ use ether\paseo\Paseo;
 use ether\paseo\records\SitemapRecord;
 use yii\base\Component;
 use yii\db\Exception;
+use yii\helpers\FileHelper;
 
 /**
  * Class Sitemap
@@ -55,7 +56,7 @@ class Sitemap extends Component
 	 *                     'name'      => 'My Row',
 	 *                     'criteria'  => [
 	 *                         'type' => MyElementType::class,
-	 *                         'myElementTypeId' => 100,
+	 *                         'id' => 100,
 	 *                     ],
 	 *                 ],
 	 *             ],
@@ -72,10 +73,12 @@ class Sitemap extends Component
 	/**
 	 * Returns an array of all the available sitemap groups
 	 *
+	 * @param bool $includeCustom
+	 *
 	 * @return array
 	 * @throws SiteNotFoundException
 	 */
-	public function getSitemapGroups ()
+	public function getSitemapGroups (bool $includeCustom = true)
 	{
 		$groups = [
 
@@ -140,18 +143,24 @@ class Sitemap extends Component
 		]);
 		$this->trigger(self::EVENT_REGISTER_SITEMAP_GROUPS, $event);
 
-		$groups['custom'] = [
-			'label' => Paseo::t('Custom URLs'),
-			'rows' => array_map(function (SitemapRecord $row) {
-				return [
-					'groupId' => $row->groupId,
-					'name'    => $row->uri,
-				];
-			}, SitemapRecord::find()->where([
-				'group' => 'custom',
-				'siteId' => Craft::$app->getSites()->getPrimarySite()->id,
-			])->orderBy('dateCreated')->all()),
-		];
+		if ($includeCustom)
+		{
+			$groups['custom'] = [
+				'label' => Paseo::t('Custom URLs'),
+				'rows'  => array_map(
+					function (SitemapRecord $row) {
+						return [
+							'groupId' => $row->groupId,
+							'name'    => $row->uri,
+						];
+					},
+					SitemapRecord::find()->where([
+						'group'  => 'custom',
+						'siteId' => Craft::$app->getSites()->getPrimarySite()->id,
+					])->orderBy('dateCreated')->all()
+				),
+			];
+		}
 
 		return $groups;
 	}
@@ -229,6 +238,51 @@ class Sitemap extends Component
 			'AND',
 			['in', 'id', $ids],
 		]);
+	}
+
+	// Generation
+	// =========================================================================
+
+	public function generateSitemapIndex ($sitemaps)
+	{
+		$sitemaps = array_map(function ($map) {
+			return <<<XML
+<sitemap>
+	<loc>{$map['url']}</loc>
+	<lastmod>{$map['lastmod']}</lastmod>
+</sitemap>
+XML;
+		}, $sitemaps);
+
+		$sitemaps = implode(PHP_EOL, $sitemaps);
+
+		$xml = <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+	{$sitemaps}
+</sitemapindex>
+XML;
+
+		file_put_contents(
+			Craft::getAlias('@paseo/sitemaps/sitemap.xml'),
+			$xml
+		);
+	}
+
+	public function generateSitemapForGroup ($group)
+	{
+		// TODO: Generate all sitemap files for the given group and return an
+		//  array of the generated file names and last modified dates.
+		//  https://www.sitemaps.org/protocol.html
+		//  [['url'=>'full_url','lastmod'=>'2004-10-01T18:23:17+00:00']]
+	}
+
+	public function generateSitemapForCustom ()
+	{
+		// TODO: Generate the sitemap file(s) for custom URLs and return an
+		//  array of the generate file names and last modified dates.
+		//  https://www.sitemaps.org/protocol.html
+		//  [['url'=>'full_url','lastmod'=>'2004-10-01T18:23:17+00:00']]
 	}
 
 }

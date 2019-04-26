@@ -17,6 +17,8 @@ use yii\base\InvalidConfigException;
 use yii\db\Exception;
 use yii\web\BadRequestHttpException;
 use yii\web\ForbiddenHttpException;
+use yii\web\HttpException;
+use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
 /**
@@ -68,6 +70,25 @@ class SitemapController extends Controller
 		Paseo::i()->sitemap->deleteSitemapRowsByIds($rowIds);
 
 		$this->redirectToPostedUrl();
+	}
+
+	/**
+	 * @return \craft\web\Response
+	 * @throws HttpException
+	 */
+	public function actionServe ()
+	{
+		$filename = Craft::$app->getRequest()->getSegment(1);
+		$file = Craft::getAlias('@paseo/sitemaps/' . $filename);
+
+		if (!file_exists($file))
+			throw new NotFoundHttpException('Couldn\'t find ' . $filename);
+
+		$response          = Craft::$app->getResponse();
+		$response->content = file_get_contents($file);
+		$response->format  = Response::FORMAT_XML;
+
+		return $response;
 	}
 
 }

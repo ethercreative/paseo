@@ -52,6 +52,11 @@ class Paseo extends Plugin
 			'sitemap' => Sitemap::class,
 		]);
 
+		Craft::setAlias(
+			'@paseo',
+			Craft::getAlias('@storage/paseo')
+		);
+
 		/** @noinspection PhpUndefinedNamespaceInspection */
 		/** @noinspection PhpUndefinedClassInspection */
 		self::$hasCommerce = class_exists(\craft\commerce\Plugin::class);
@@ -63,6 +68,12 @@ class Paseo extends Plugin
 			UrlManager::class,
 			UrlManager::EVENT_REGISTER_CP_URL_RULES,
 			[$this, 'onRegisterCpUrlRules']
+		);
+
+		Event::on(
+			UrlManager::class,
+			UrlManager::EVENT_REGISTER_SITE_URL_RULES,
+			[$this, 'onRegisterSiteUrlRules']
 		);
 
 		Event::on(
@@ -155,6 +166,14 @@ class Paseo extends Plugin
 
 	// Events
 	// =========================================================================
+
+	public function onRegisterSiteUrlRules (RegisterUrlRulesEvent $event)
+	{
+		$settings = $this->getSettings();
+
+		if ($settings->sitemapEnabled)
+			$event->rules['sitemap<file:.*>.xml'] = 'paseo/sitemap/serve';
+	}
 
 	public function onRegisterCpUrlRules (RegisterUrlRulesEvent $event)
 	{
