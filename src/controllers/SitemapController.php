@@ -11,6 +11,7 @@ namespace ether\paseo\controllers;
 use Craft;
 use craft\errors\SiteNotFoundException;
 use craft\web\Controller;
+use ether\paseo\jobs\GenerateSitemaps;
 use ether\paseo\Paseo;
 use ether\paseo\web\assets\PaseoAsset;
 use yii\base\InvalidConfigException;
@@ -68,6 +69,8 @@ class SitemapController extends Controller
 
 		Paseo::i()->sitemap->saveSitemapRows($rows);
 		Paseo::i()->sitemap->deleteSitemapRowsByIds($rowIds);
+
+		Craft::$app->getQueue()->push(new GenerateSitemaps());
 
 		$this->redirectToPostedUrl();
 	}
