@@ -58,8 +58,7 @@ class Sitemap extends Component
 	 *             'label' => 'My Group',
 	 *             'rows' => [
 	 *                 [
-	 *                     'groupId'   => 100, // Can be a string or int, can't
-	 *                     contain a period (.)
+	 *                     'groupId'   => 100, // Can be a string or int, can't contain a period (.)
 	 *                     'name'      => 'My Row',
      *                     'type'      => MyElementType::class,
 	 *                     'criteria'  => [

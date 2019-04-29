@@ -25,7 +25,8 @@ use yii\base\Event;
  * @author  Ether Creative
  * @package ether\paseo
  *
- * @property Sitemap $sitemap
+ * @property Sitemap        $sitemap
+ * @property services\Paseo $paseo
  */
 class Paseo extends Plugin
 {
@@ -50,6 +51,7 @@ class Paseo extends Plugin
 
 		$this->setComponents([
 			'sitemap' => Sitemap::class,
+			'paseo'   => services\Paseo::class,
 		]);
 
 		Craft::setAlias(
@@ -81,6 +83,26 @@ class Paseo extends Plugin
 			UserPermissions::EVENT_REGISTER_PERMISSIONS,
 			[$this, 'onRegisterPermissions']
 		);
+
+		// Injections
+		// ---------------------------------------------------------------------
+
+		$request = Craft::$app->getRequest();
+		$segments = $request->getSegments();
+
+		if (
+			$request->getIsCpRequest() &&
+			$request->getIsGet() &&
+			strpos($request->getFullPath(), 'settings/sites') &&
+			end($segments) === 'sites' &&
+			$this->getSettings()->sitemapEnabled
+		) {
+			$this->paseo->injectNotice(
+				'tip',
+				'#content',
+				"**Sitemaps**  \nEach site group gets its own sitemap. The first site in each group is treated as the primary site while all other sites are treated as alternate versions (useful for other languages)."
+			);
+		}
 
 	}
 

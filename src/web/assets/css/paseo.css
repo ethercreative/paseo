@@ -9,8 +9,9 @@
 	padding: 14px 14px 14px 60px;
 	margin-bottom: 24px;
 
-	background-color: rgba(0,0,0,0.025);
+	background-color: #fbfcfd;
 	border-radius: 3px;
+	border: 1px solid #e3e5e8;
 }
 
 .paseo-tip:before,

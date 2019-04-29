@@ -59,6 +59,9 @@ return [
 	'These settings won\'t have any affect until you enable it. Visit the [sitemap settings]({settingsUrl}) to enable the sitemap.' =>
 		'These settings won\'t have any affect until you enable it. Visit the [sitemap settings]({settingsUrl}) to enable the sitemap.',
 
+	"**Sitemaps**  \nEach site group gets its own sitemap. The first site in each group is treated as the primary site while all other sites are treated as alternate versions (useful for other languages)." =>
+		"**Sitemaps**  \nEach site group gets its own sitemap. The first site in each group is treated as the primary site while all other sites are treated as alternate versions (useful for other languages).",
+
 	// Settings
 	// =========================================================================
 
