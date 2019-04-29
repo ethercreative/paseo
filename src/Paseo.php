@@ -188,6 +188,7 @@ class Paseo extends Plugin
 
 		// Sitemap
 		$event->rules['paseo/sitemap'] = 'paseo/sitemap/index';
+		$event->rules['paseo/sitemap/test'] = 'paseo/sitemap/test';
 
 		// Settings
 		$event->rules['paseo/settings'] = 'paseo/settings/index';

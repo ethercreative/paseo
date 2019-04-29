@@ -9,20 +9,26 @@
 namespace ether\paseo\services;
 
 use Craft;
+use craft\base\Element;
+use craft\base\ElementInterface;
 use craft\commerce\elements\Product;
 use craft\commerce\models\ProductType;
 use craft\commerce\Plugin as Commerce;
 use craft\elements\Category;
 use craft\elements\Entry;
 use craft\errors\SiteNotFoundException;
+use craft\helpers\FileHelper;
+use craft\helpers\UrlHelper;
 use craft\models\CategoryGroup;
 use craft\models\Section;
+use craft\models\Site;
+use DateTime;
 use ether\paseo\events\RegisterSitemapGroupEvent;
 use ether\paseo\Paseo;
 use ether\paseo\records\SitemapRecord;
 use yii\base\Component;
+use yii\base\ErrorException;
 use yii\db\Exception;
-use yii\helpers\FileHelper;
 
 /**
  * Class Sitemap
@@ -52,10 +58,11 @@ class Sitemap extends Component
 	 *             'label' => 'My Group',
 	 *             'rows' => [
 	 *                 [
-	 *                     'groupId'   => 100, // Can be a string or int, can't contain a period (.)
+	 *                     'groupId'   => 100, // Can be a string or int, can't
+	 *                     contain a period (.)
 	 *                     'name'      => 'My Row',
+     *                     'type'      => MyElementType::class,
 	 *                     'criteria'  => [
-	 *                         'type' => MyElementType::class,
 	 *                         'id' => 100,
 	 *                     ],
 	 *                 ],
@@ -89,8 +96,8 @@ class Sitemap extends Component
 						return [
 							'groupId'   => $section->id,
 							'name'      => $section->name,
+							'type'      => Entry::class,
 							'criteria'  => [
-								'type'      => Entry::class,
 								'sectionId' => $section->id,
 							],
 						];
@@ -106,8 +113,8 @@ class Sitemap extends Component
 						return [
 							'groupId'   => $group->id,
 							'name'      => $group->name,
+							'type'    => Category::class,
 							'criteria'  => [
-								'type'    => Category::class,
 								'groupId' => $group->id,
 							],
 						];
@@ -127,8 +134,8 @@ class Sitemap extends Component
 						return [
 							'groupId'   => $type->id,
 							'name'      => $type->name,
+							'type'   => Product::class,
 							'criteria'  => [
-								'type'   => Product::class,
 								'typeId' => $type->id,
 							],
  						];
@@ -243,38 +250,154 @@ class Sitemap extends Component
 	// Generation
 	// =========================================================================
 
-	public function generateSitemapIndex ($sitemaps)
+	/**
+	 * @param $sitemapData
+	 *
+	 * @throws ErrorException
+	 * @throws \yii\base\Exception
+	 */
+	public function generateSitemapIndex ($sitemapData)
 	{
-		$sitemaps = array_map(function ($map) {
-			return <<<XML
+		$siteGroups = Craft::$app->getSites()->getAllGroups();
+
+		foreach ($siteGroups as $group)
+		{
+			if (!array_key_exists($group->id, $sitemapData) || empty($sitemapData[$group->id]))
+				continue;
+
+			$sitemaps = array_map(
+				function ($map) {
+					return <<<XML
 <sitemap>
 	<loc>{$map['url']}</loc>
 	<lastmod>{$map['lastmod']}</lastmod>
 </sitemap>
 XML;
-		}, $sitemaps);
+				},
+				$sitemapData[$group->id]
+			);
 
-		$sitemaps = implode(PHP_EOL, $sitemaps);
+			$sitemaps = implode(PHP_EOL, $sitemaps);
 
-		$xml = <<<XML
+			$xml = <<<XML
 <?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 	{$sitemaps}
 </sitemapindex>
 XML;
 
-		file_put_contents(
-			Craft::getAlias('@paseo/sitemaps/sitemap.xml'),
-			$xml
-		);
+			FileHelper::createDirectory(
+				Craft::getAlias('@paseo/sitemaps/' . $group->id)
+			);
+			FileHelper::writeToFile(
+				Craft::getAlias(
+					'@paseo/sitemaps/' . $group->id . '/sitemap.xml'
+				),
+				$xml
+			);
+		}
 	}
 
-	public function generateSitemapForGroup ($group)
+	/**
+	 * @param $handle
+	 * @param $group
+	 *
+	 * @return array
+	 * @throws \yii\base\Exception
+	 * @throws ErrorException
+	 */
+	public function generateSitemapForGroup ($handle, $group)
 	{
-		// TODO: Generate all sitemap files for the given group and return an
-		//  array of the generated file names and last modified dates.
-		//  https://www.sitemaps.org/protocol.html
-		//  [['url'=>'full_url','lastmod'=>'2004-10-01T18:23:17+00:00']]
+		$sitemaps = [];
+		$settings = Paseo::i()->getSettings();
+		$siteGroups = Craft::$app->getSites()->getAllGroups();
+		$meta = SitemapRecord::findAll([
+			'group' => $handle,
+		]);
+
+		foreach ($group['rows'] as $row)
+		{
+			foreach ($siteGroups as $siteGroup)
+			{
+				if (empty($sitemaps[$siteGroup->id]))
+					$sitemaps[$siteGroup->id] = [];
+
+				/** @var DateTime $lastMod */
+				$lastMod = null;
+
+				$sites = $siteGroup->getSites();
+				$primarySite = $sites[0];
+
+				$config = $this->_find($meta, [
+					'groupId'   => $row['groupId'],
+					'siteId'    => $primarySite->id,
+					'elementId' => null,
+				]);
+
+				if (empty($config))
+					continue;
+
+				$config = reset($config);
+
+				if (!$config->enabled)
+					continue;
+
+				/** @var ElementInterface $cls */
+				$cls = $row['type'];
+
+				$totalResults = $cls::find()
+                    ->where($row['criteria'])
+					->siteId($primarySite->id)
+                    ->count();
+
+				$totalPages = ceil($totalResults / $settings->sitemapPaginationLimit);
+				$p = 0;
+
+				while ($p++ < $totalPages)
+				{
+					$elementsBySite = [];
+
+					foreach ($sites as $site)
+					{
+						$elementsBySite[$site->id] = $cls::find()
+							->where($row['criteria'])
+							->siteId($site->id)
+							->limit($settings->sitemapPaginationLimit)
+							->orderBy('dateCreated')
+							->offset($settings->sitemapPaginationLimit * ($p - 1))
+							->all();
+					}
+
+					$xml = $this->_buildSitemapForElements(
+						$config,
+						$sites,
+						$elementsBySite,
+						$lastMod
+					);
+					$file = 'sitemap-' . $handle . '-' . $p . '.xml';
+
+					FileHelper::createDirectory(
+						Craft::getAlias('@paseo/sitemaps/' . $siteGroup->id)
+					);
+					FileHelper::writeToFile(
+						Craft::getAlias('@paseo/sitemaps/' . $siteGroup->id . '/' . $file),
+						$xml
+					);
+
+					$sitemaps[$siteGroup->id][] = [
+						'url' => UrlHelper::siteUrl(
+							$file,
+							null,
+							null,
+							$primarySite->id
+						),
+						'lastmod' => $lastMod ? $lastMod->format(DateTime::W3C) : null,
+					];
+				}
+			}
+		}
+
+		return $sitemaps;
 	}
 
 	public function generateSitemapForCustom ()
@@ -282,7 +405,91 @@ XML;
 		// TODO: Generate the sitemap file(s) for custom URLs and return an
 		//  array of the generate file names and last modified dates.
 		//  https://www.sitemaps.org/protocol.html
-		//  [['url'=>'full_url','lastmod'=>'2004-10-01T18:23:17+00:00']]
+		//  [$siteGroup->id => [['url'=>'full_url','lastmod'=>'2004-10-01T18:23:17+00:00']]]
+
+		return [];
+	}
+
+	// Helpers
+	// =========================================================================
+
+	/**
+	 * @param array $data
+	 * @param array $query
+	 *
+	 * @return array
+	 */
+	private function _find (array $data, array $query)
+	{
+		return array_filter($data, function ($row) use ($query) {
+			foreach ($query as $column => $value)
+				if ($row->$column != $value)
+					return false;
+
+			return true;
+		});
+	}
+
+	/**
+	 * @param SitemapRecord $config
+	 * @param               $sites
+	 * @param               $elementsBySite
+	 * @param               $lastMod
+	 *
+	 * @return string
+	 */
+	private function _buildSitemapForElements (
+		SitemapRecord $config, $sites, $elementsBySite, &$lastMod
+	) {
+		// TODO: Get config overrides for individual elements
+		$primarySite = array_shift($sites);
+
+		$urls = array_map(function (Element $element) use ($config, $sites, $elementsBySite, &$lastMod) {
+			$altUrls = [];
+
+			/** @var Site $site */
+			foreach ($sites as $site)
+			{
+				$el = $this->_find($elementsBySite[$site->id], [
+					'id' => $element->id,
+				]);
+
+				if (empty($el))
+					continue;
+
+				$el = reset($el);
+
+				$altUrls[] = <<<XML
+<xhtml:link rel="alternate" hreflang="$site->language" href="{$el->getUrl()}" />
+XML;
+			}
+
+			$altUrls = implode(PHP_EOL, $altUrls);
+
+			if ($lastMod === null || $lastMod < $element->dateUpdated)
+				$lastMod = $element->dateUpdated;
+
+			// TODO: Include media / indexable files if required
+
+			return <<<XML
+<url>
+	<loc>{$element->getUrl()}</loc>
+	<lastmod>{$element->dateUpdated->format(DateTime::W3C)}</lastmod>
+	<changefreq>{$config->frequency}</changefreq>
+	<priority>{$config->priority}</priority>
+	{$altUrls}
+</url>
+XML;
+		}, $elementsBySite[$primarySite->id]);
+
+		$urls = implode(PHP_EOL, $urls);
+
+		return <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+	{$urls}
+</urlset>
+XML;
 	}
 
 }

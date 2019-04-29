@@ -75,11 +75,13 @@ class SitemapController extends Controller
 	/**
 	 * @return \craft\web\Response
 	 * @throws HttpException
+	 * @throws SiteNotFoundException
 	 */
 	public function actionServe ()
 	{
+		$siteGroupId = Craft::$app->getSites()->getCurrentSite()->groupId;
 		$filename = Craft::$app->getRequest()->getSegment(1);
-		$file = Craft::getAlias('@paseo/sitemaps/' . $filename);
+		$file = Craft::getAlias('@paseo/sitemaps/' . $siteGroupId . '/' . $filename);
 
 		if (!file_exists($file))
 			throw new NotFoundHttpException('Couldn\'t find ' . $filename);

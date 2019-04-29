@@ -65,18 +65,18 @@ class GenerateSitemaps extends BaseJob
 		FileHelper::createDirectory($sitemapsStorage);
 		FileHelper::clearDirectory($sitemapsStorage);
 
-		foreach ($groups as $group)
+		foreach ($groups as $handle => $group)
 		{
 			$this->_incrementStep($queue);
 
-			$sitemaps = array_merge(
+			$sitemaps = $this->_mergeSitemaps(
 				$sitemaps,
-				$s->generateSitemapForGroup($group)
+				$s->generateSitemapForGroup($handle, $group)
 			);
 		}
 
 		$this->_incrementStep($queue);
-		$sitemaps = array_merge(
+		$sitemaps = $this->_mergeSitemaps(
 			$sitemaps,
 			$s->generateSitemapForCustom()
 		);
@@ -85,10 +85,32 @@ class GenerateSitemaps extends BaseJob
 		$s->generateSitemapIndex($sitemaps);
 	}
 
+	// Helpers
+	// =========================================================================
+
 	private function _incrementStep ($queue)
 	{
 		$this->_currentStep++;
 		$this->setProgress($queue, $this->_currentStep / $this->_totalSteps);
+	}
+
+	private function _mergeSitemaps ($a, $b)
+	{
+		foreach ($b as $siteGroupId => $sitemaps)
+		{
+			if (!array_key_exists($siteGroupId, $a))
+			{
+				$a[$siteGroupId] = $sitemaps;
+				continue;
+			}
+
+			$a[$siteGroupId] = array_merge(
+				$a[$siteGroupId],
+				$sitemaps
+			);
+		}
+
+		return $a;
 	}
 
 }
