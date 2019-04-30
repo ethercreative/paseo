@@ -37,6 +37,15 @@
 
 	<input type="hidden" name="action" value="paseo/sitemap/save-rows">
 
+	{% if not enabled %}
+		<div class="paseo-warning">
+			<h4>{{ 'Your sitemap isn\'t enabled!'|t('paseo') }}</h4>
+			{{ 'These settings won\'t have any affect until you enable it. Visit the [sitemap settings]({settingsUrl}) to enable the sitemap.'|t('paseo', {
+				'settingsUrl': cpUrl('paseo/settings/sitemap'),
+			})|md }}
+		</div>
+	{% endif %}
+
 	<div class="paseo-tip">
 		<h4>{{ 'About your sitemap'|t('paseo') }}</h4>
 		{{ 'Your sitemap will tell Google and other search engines about the most *important* pages on your site, and their relationship to media and other files (if you\'ve enabled that in the [sitemap settings]({settingsUrl})).'|t('paseo', {
@@ -49,15 +58,6 @@
 		<h4>{{ 'Setting priority'|t('paseo') }}</h4>
 		<p>{{ 'Priority should be set based on how important a page is. So landing pages and category pages should have a higher priority than product pages, for example. Google currently ignores the priority, but it\'s worth getting it correct anyway.'|t('paseo') }}</p>
 	</div>
-
-	{% if not enabled %}
-		<div class="paseo-warning">
-			<h4>{{ 'Your sitemap isn\'t enabled!'|t('paseo') }}</h4>
-			{{ 'These settings won\'t have any affect until you enable it. Visit the [sitemap settings]({settingsUrl}) to enable the sitemap.'|t('paseo', {
-				'settingsUrl': cpUrl('paseo/settings/sitemap'),
-			})|md }}
-		</div>
-	{% endif %}
 
 	{% for handle, group in groups if handle == 'custom' or group.rows|length %}
 	{% set isCustom = handle == 'custom' %}

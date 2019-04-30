@@ -88,6 +88,10 @@ class Paseo extends Plugin
 		// ---------------------------------------------------------------------
 
 		$request = Craft::$app->getRequest();
+
+		if ($request->getIsConsoleRequest())
+			return;
+
 		$segments = $request->getSegments();
 
 		if (

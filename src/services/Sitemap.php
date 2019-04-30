@@ -11,13 +11,20 @@ namespace ether\paseo\services;
 use Craft;
 use craft\base\Element;
 use craft\base\ElementInterface;
+use craft\base\Field;
 use craft\commerce\elements\Product;
 use craft\commerce\models\ProductType;
 use craft\commerce\Plugin as Commerce;
+use craft\elements\Asset;
 use craft\elements\Category;
 use craft\elements\Entry;
+use craft\elements\MatrixBlock;
 use craft\errors\SiteNotFoundException;
+use craft\fields\Assets;
+use craft\fields\Matrix;
 use craft\helpers\FileHelper;
+use craft\helpers\Html;
+use craft\helpers\Json;
 use craft\helpers\UrlHelper;
 use craft\models\CategoryGroup;
 use craft\models\Section;
@@ -28,6 +35,7 @@ use ether\paseo\Paseo;
 use ether\paseo\records\SitemapRecord;
 use yii\base\Component;
 use yii\base\ErrorException;
+use yii\base\InvalidConfigException;
 use yii\db\Exception;
 
 /**
@@ -72,6 +80,63 @@ class Sitemap extends Component
 	 * ```
 	 */
 	const EVENT_REGISTER_SITEMAP_GROUPS = 'paseo.registerSitemapGroups';
+
+	// Properties
+	// =========================================================================
+
+	private $_indexableFiles = [];
+
+	private static $_INDEXABLE_FILE_TYPES = [
+		'swf',
+		'pdf',
+		'ps',
+		'dwf',
+		'kml',
+		'kmz',
+		'gpx',
+		'hwp',
+		'htm',
+		'html',
+		'xls',
+		'xlsx',
+		'ppt',
+		'pptx',
+		'doc',
+		'docx',
+		'odp',
+		'ods',
+		'odt',
+		'rtf',
+		'svg',
+		'tex',
+		'txt',
+		'text',
+		'md',
+		'bas',
+		'c',
+		'cc',
+		'cpp',
+		'cxx',
+		'h',
+		'hpp',
+		'cs',
+		'java',
+		'pl',
+		'py',
+		'wml',
+		'wap',
+		'xml',
+	];
+
+	private static $_INDEXABLE_FILE_KINDS = [
+		'excel',
+		'illustrator',
+		'powerpoint',
+		'pdf',
+		'xml',
+		'text',
+		'word',
+	];
 
 	// Public Methods
 	// =========================================================================
@@ -442,13 +507,22 @@ XML;
 	) {
 		// TODO: Get config overrides for individual elements
 		$primarySite = array_shift($sites);
+		$settings = Paseo::i()->getSettings();
 
-		$urls = array_map(function (Element $element) use ($config, $sites, $elementsBySite, &$lastMod) {
+		$urls = array_map(function (Element $element) use (
+			$config, $sites, $elementsBySite, &$lastMod, $settings
+		) {
+			if ($element->getUrl() === null)
+				return null;
+
 			$altUrls = [];
 
 			/** @var Site $site */
 			foreach ($sites as $site)
 			{
+				// TODO: Check config for this site to ensure it's enabled in
+				//  sitemap settings
+
 				$el = $this->_find($elementsBySite[$site->id], [
 					'id' => $element->id,
 				]);
@@ -456,7 +530,11 @@ XML;
 				if (empty($el))
 					continue;
 
+				/** @var Element $el */
 				$el = reset($el);
+
+				if ($el->getUrl() === null)
+					continue;
 
 				$altUrls[] = <<<XML
 <xhtml:link rel="alternate" hreflang="$site->language" href="{$el->getUrl()}" />
@@ -465,30 +543,204 @@ XML;
 
 			$altUrls = implode(PHP_EOL, $altUrls);
 
+			if ($settings->sitemapIncludeMedia)
+				$media = $this->_mediaUrls($element);
+			else
+				$media = '';
+
 			if ($lastMod === null || $lastMod < $element->dateUpdated)
 				$lastMod = $element->dateUpdated;
 
-			// TODO: Include media / indexable files if required
-
 			return <<<XML
 <url>
-	<loc>{$element->getUrl()}</loc>
+	<loc>{$this->_url($element->getUrl())}</loc>
 	<lastmod>{$element->dateUpdated->format(DateTime::W3C)}</lastmod>
 	<changefreq>{$config->frequency}</changefreq>
 	<priority>{$config->priority}</priority>
 	{$altUrls}
+	{$media}
 </url>
 XML;
 		}, $elementsBySite[$primarySite->id]);
 
 		$urls = implode(PHP_EOL, $urls);
 
+		$attributes = [
+			'xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"',
+			'xmlns:xhtml="http://www.w3.org/1999/xhtml"',
+		];
+
+		if ($settings->sitemapIncludeMedia)
+		{
+			$attributes[] = 'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"';
+			$attributes[] = 'xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"';
+		}
+
+		$attributes = implode(' ', $attributes);
+
+		$indexableFiles = implode(PHP_EOL, $this->_indexableFiles);
+
 		return <<<XML
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+<urlset {$attributes}>
 	{$urls}
+	{$indexableFiles}
 </urlset>
 XML;
+	}
+
+	/**
+	 * @param Element $element
+	 *
+	 * @return string
+	 * @throws \yii\base\Exception
+	 */
+	private function _mediaUrls (Element $element)
+	{
+		$assets = $this->_getFieldsFromElement($element, [
+			Assets::class,
+		]);
+
+		// TODO: Add support for other block based fields (i.e. SuperTable, Neo)
+		$blocks = $this->_getFieldsFromElement($element, [
+			Matrix::class,
+		]);
+		
+		foreach ($blocks as $field)
+			foreach ($element->{$field->handle}->all() as $block)
+				$assets = array_merge(
+					$assets,
+					$this->_getFieldsFromBlock($block, [
+						Assets::class,
+					])
+				);
+
+		$urls = [];
+
+		foreach ($assets as $assetField)
+			foreach ($element->{$assetField->handle}->all() as $asset)
+				$urls[] = $this->_assetFieldToSitemapUrls($asset);
+
+		return implode(PHP_EOL, array_filter($urls));
+	}
+
+	/**
+	 * Gets all the fields on the element that match the types given
+	 *
+	 * @param Element $element
+	 * @param array   $fieldTypes
+	 *
+	 * @return Field[]
+	 */
+	private function _getFieldsFromElement (Element $element, array $fieldTypes)
+	{
+		static $fieldsCache = [];
+
+		$fields = [];
+		$fieldLayout = $element->getFieldLayout();
+		$key = $fieldLayout->uid . Json::encode($fieldTypes);
+
+		if (array_key_exists($key, $fieldsCache))
+			return $fieldsCache[$key];
+
+		$allFields = $fieldLayout->getFields();
+
+		foreach ($allFields as $field)
+			if (in_array(get_class($field), $fieldTypes))
+				$fields[] = $field;
+
+		return $fieldsCache[$key] = $fields;
+	}
+
+	/**
+	 * @param MatrixBlock $block
+	 * @param array       $fieldTypes
+	 *
+	 * @return array
+	 */
+	private function _getFieldsFromBlock ($block, array $fieldTypes)
+	{
+		static $fieldsCache = [];
+
+		$fields = [];
+
+		try {
+			$type = $block->getType();
+			$key = $type->uid . Json::encode($fieldTypes);
+
+			if (array_key_exists($key, $fieldsCache))
+				return $fieldsCache[$key];
+
+			$allFields = $type->getFields();
+		}
+		catch (InvalidConfigException $e) {
+			return [];
+		}
+
+		foreach ($allFields as $field)
+			if (in_array(get_class($field), $fieldTypes))
+				$fields[] = $field;
+
+		return $fieldsCache[$key] = $fields;
+	}
+
+	/**
+	 * @param Asset $asset
+	 *
+	 * @return string|null
+	 * @throws \yii\base\Exception
+	 */
+	private function _assetFieldToSitemapUrls (Asset $asset)
+	{
+		if (!$asset->enabledForSite || !$asset->getUrl())
+			return null;
+
+		switch ($asset->kind)
+		{
+			case 'image':
+				return <<<XML
+<image:image>
+	<image:loc>{$this->_url($asset->getUrl())}</image:loc>
+	<image:title>{$asset->title}</image:title>
+</image:image>
+XML;
+			case 'video':
+				return <<<XML
+<video:video>
+	<video:content_loc>{$this->_url($asset->getUrl())}</video:content_loc>
+	<video:title>{$asset->title}</video:title>
+</video:video>
+XML;
+		}
+
+		if (
+			in_array($asset->mimeType, self::$_INDEXABLE_FILE_TYPES) ||
+			in_array($asset->kind, self::$_INDEXABLE_FILE_KINDS)
+		) {
+			// TODO: Allow setting of changefreq / priority in sitemap settings
+			$this->_indexableFiles[] = <<<XML
+<url>
+	<loc>{$this->_url($asset->getUrl())}</loc>
+	<lastmod>{$asset->dateUpdated->format(DateTime::W3C)}</lastmod>
+</url>
+XML;
+		}
+
+		return null;
+	}
+
+	/**
+	 * @param string $url
+	 *
+	 * @return string
+	 * @throws \yii\base\Exception
+	 */
+	private function _url (string $url)
+	{
+		if (!UrlHelper::isAbsoluteUrl($url))
+			$url = UrlHelper::siteUrl($url);
+
+		return Html::encode($url);
 	}
 
 }
