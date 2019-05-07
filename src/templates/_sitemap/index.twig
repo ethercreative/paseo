@@ -74,7 +74,16 @@
 						title="{{ 'Edit'|t }} {{ row.name }}"
 						type="button"
 						data-paseo-toggle-row="{{ handle ~ row.groupId }}"
-					>{{ row.name }}</button>
+					>
+						{{ row.name }}
+
+						{% set uri = getMeta(row, 'uriFormat') %}
+						{% if uri %}
+							<span class="paseo-uri">
+								{{- uri == '__home__' ? '/' : uri -}}
+							</span>
+						{% endif %}
+					</button>
 
 					{% if isCustom %}
 						<button
@@ -278,6 +287,11 @@
 #paseoAddCustom {
 	margin-top: 14px;
 	font-size: 14px;
+}
+.paseo-uri {
+	display: inline-block;
+	margin-left: 10px;
+	color: rgba(0,0,0,0.5);
 }
 {% endcss %}
 

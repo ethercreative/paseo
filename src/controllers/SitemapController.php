@@ -14,6 +14,7 @@ use craft\web\Controller;
 use ether\paseo\jobs\GenerateSitemaps;
 use ether\paseo\Paseo;
 use ether\paseo\web\assets\PaseoAsset;
+use Twig\TwigFunction;
 use yii\base\InvalidConfigException;
 use yii\db\Exception;
 use yii\web\BadRequestHttpException;
@@ -46,7 +47,22 @@ class SitemapController extends Controller
 		$rows    = Paseo::i()->sitemap->getSitemapRows();
 		$sites   = Craft::$app->getSites()->getAllSites();
 
-		Craft::$app->getView()->registerAssetBundle(PaseoAsset::class);
+		$view = Craft::$app->getView();
+		$view->registerAssetBundle(PaseoAsset::class);
+		$view->getTwig()->addFunction(
+			new TwigFunction(
+				'getMeta',
+				function (array $row, $key) {
+					if (!array_key_exists('meta', $row))
+						return null;
+
+					if (!array_key_exists($key, $row['meta']))
+						return null;
+
+					return $row['meta'][$key];
+				}
+			)
+		);
 
 		return $this->renderTemplate(
 			'paseo/_sitemap/index',

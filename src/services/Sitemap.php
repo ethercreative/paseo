@@ -69,6 +69,9 @@ class Sitemap extends Component
 	 *                     'groupId'   => 100, // Can be a string or int, can't contain a period (.)
 	 *                     'name'      => 'My Row',
      *                     'type'      => MyElementType::class,
+	 *                     'meta'      => [
+	 *                         'templateUri' => 'example/{slug}',
+	 *                     ],
 	 *                     'criteria'  => [
 	 *                         'id' => 100,
 	 *                     ],
@@ -157,10 +160,20 @@ class Sitemap extends Component
 				'label' => Craft::t('app', 'Sections'),
 				'rows' => array_map(
 					function (Section $section) {
+						$uriFormat = null;
+						$siteSettings = $section->getSiteSettings();
+						$siteSettings = reset($siteSettings);
+
+						if ($siteSettings)
+							$uriFormat = $siteSettings->uriFormat;
+
 						return [
 							'groupId'   => $section->id,
 							'name'      => $section->name,
 							'type'      => Entry::class,
+							'meta'      => [
+								'uriFormat' => $uriFormat,
+							],
 							'criteria'  => [
 								'sectionId' => $section->id,
 							],
@@ -174,10 +187,20 @@ class Sitemap extends Component
 				'label' => Craft::t('app', 'Categories'),
 				'rows' => array_map(
 					function (CategoryGroup $group) {
+						$uriFormat = null;
+						$siteSettings = $group->getSiteSettings();
+						$siteSettings = reset($siteSettings);
+
+						if ($siteSettings)
+							$uriFormat = $siteSettings->uriFormat;
+
 						return [
 							'groupId'   => $group->id,
 							'name'      => $group->name,
-							'type'    => Category::class,
+							'type'      => Category::class,
+							'meta'      => [
+								'uriFormat' => $uriFormat,
+							],
 							'criteria'  => [
 								'groupId' => $group->id,
 							],
@@ -189,6 +212,8 @@ class Sitemap extends Component
 
 		];
 
+		// TODO: Move this into an integrations folder?
+		//  (Have all integrations separate as useful examples)
 		if (Paseo::$hasCommerce)
 		{
 			$groups['productTypes'] = [
@@ -198,7 +223,7 @@ class Sitemap extends Component
 						return [
 							'groupId'   => $type->id,
 							'name'      => $type->name,
-							'type'   => Product::class,
+							'type'      => Product::class,
 							'criteria'  => [
 								'typeId' => $type->id,
 							],
@@ -605,7 +630,7 @@ XML;
 		$blocks = $this->_getFieldsFromElement($element, [
 			Matrix::class,
 		]);
-		
+
 		foreach ($blocks as $field)
 			foreach ($element->{$field->handle}->all() as $block)
 				$assets = array_merge(
